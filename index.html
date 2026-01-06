@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="theme-color" content="#fafafa" />
+    <link rel="manifest" href="manifest.json" />
+    <title>手搖飲日記 (雲端同步版)</title>
+    <style>
+      :root {
+        --bg: #f2f2f7;
+        --card: #fff;
+        --text: #1c1c1e;
+        --sub: #8e8e93;
+        --line: #e5e5ea;
+        --brand: #007aff;
+        --danger: #ff3b30;
+        --radius: 18px;
+        --shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+        --safe-bottom: env(safe-area-inset-bottom, 20px);
+        --safe-top: env(safe-area-inset-top, 20px);
+      }
+      * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Helvetica, Arial, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        height: 100vh;
+        overflow-y: auto;
+      }
+      input,
+      button {
+        font-family: inherit;
+      }
+
+      /* Header */
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        padding: max(12px, var(--safe-top)) 16px 12px;
+      }
+      .head-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+      .app-name {
+        font-size: 24px;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+      }
+      .icon-btn {
+        background: none;
+        border: none;
+        color: var(--brand);
+        font-size: 15px;
+        font-weight: 600;
+        padding: 8px;
+        cursor: pointer;
+      }
+
+      /* Segment Control */
+      .segment {
+        background: #e3e3e8;
+        padding: 2px;
+        border-radius: 10px;
+        display: flex;
+      }
+      .segment button {
+        flex: 1;
+        border: none;
+        background: none;
+        padding: 6px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text);
+        transition: all 0.2s;
+      }
+      .segment button.active {
+        background: #fff;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      /* Main Content */
+      .wrap {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 16px 16px 100px;
+      }
+
+      /* Stat Cards */
+      .stats-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+      .stat-card {
+        background: var(--card);
+        padding: 16px;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        display: flex;
+        flex-direction: column;
+      }
+      .stat-label {
+        font-size: 13px;
+        color: var(--sub);
+        font-weight: 600;
+        margin-bottom: 4px;
+      }
+      .stat-val {
+        font-size: 26px;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+      }
+      .stat-unit {
+        font-size: 14px;
+        color: var(--sub);
+        font-weight: 600;
+        margin-left: 2px;
+      }
+
+      /* Section Headers */
+      h2 {
+        font-size: 18px;
+        margin: 24px 4px 12px;
+        font-weight: 700;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .link-btn {
+        font-size: 14px;
+        color: var(--brand);
+        font-weight: 500;
+        cursor: pointer;
+      }
+
+      /* List Items */
+      .list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .item {
+        background: var(--card);
+        padding: 16px;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: transform 0.1s;
+        cursor: pointer;
+      }
+      .item:active {
+        transform: scale(0.98);
+      }
+      .item-main {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .item-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #000;
+      }
+      .item-sub {
+        font-size: 13px;
+        color: var(--sub);
+      }
+      .item-right {
+        text-align: right;
+      }
+      .item-price {
+        font-size: 17px;
+        font-weight: 700;
+        color: var(--text);
+      }
+      .item-tag {
+        display: inline-block;
+        background: #f2f2f7;
+        color: var(--sub);
+        font-size: 11px;
+        padding: 2px 6px;
+        border-radius: 6px;
+        margin-top: 4px;
+        font-weight: 600;
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 40px 0;
+        color: var(--sub);
+        font-size: 14px;
+        border: 2px dashed #e5e5ea;
+        border-radius: var(--radius);
+      }
+      .loading-state {
+        text-align: center;
+        padding: 20px;
+        color: var(--sub);
+        font-size: 14px;
+      }
+      .sync-status {
+        position: fixed;
+        top: 60px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--card);
+        padding: 8px 16px;
+        border-radius: 20px;
+        box-shadow: var(--shadow);
+        font-size: 12px;
+        font-weight: 600;
+        z-index: 150;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s;
+      }
+      .sync-status.show {
+        opacity: 1;
+      }
+      .sync-status.success {
+        color: #34c759;
+      }
+      .sync-status.error {
+        color: var(--danger);
+      }
+      .sync-status.syncing {
+        color: var(--brand);
+      }
+      .offline-banner {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: #ff9500;
+        color: #fff;
+        text-align: center;
+        padding: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        z-index: 200;
+        transform: translateY(-100%);
+        transition: transform 0.3s;
+      }
+      .offline-banner.show {
+        transform: translateY(0);
+      }
+
+      /* FAB */
+      .fab {
+        position: fixed;
+        bottom: max(20px, var(--safe-bottom));
+        right: 20px;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: var(--text);
+        color: #fff;
+        border: none;
+        font-size: 28px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 90;
+        transition: transform 0.2s;
+      }
+      .fab:active {
+        transform: scale(0.9);
+      }
+
+      /* Modal / Sheet */
+      .overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.4);
+        z-index: 200;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s;
+      }
+      .overlay.show {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .sheet {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: var(--card);
+        border-radius: 24px 24px 0 0;
+        z-index: 201;
+        padding: 20px 20px max(20px, var(--safe-bottom));
+        transform: translateY(100%);
+        transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+        max-width: 600px;
+        margin: 0 auto;
+      }
+      .sheet.show {
+        transform: translateY(0);
+      }
+      .sheet-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+      .sheet-title {
+        font-size: 20px;
+        font-weight: 800;
+      }
+      .close-btn {
+        background: #f2f2f7;
+        border: none;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        color: #888;
+        font-size: 18px;
+      }
+
+      /* Form */
+      .form-group {
+        margin-bottom: 16px;
+      }
+      .form-label {
+        display: block;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--sub);
+        margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .form-input {
+        width: 100%;
+        padding: 14px;
+        background: #f2f2f7;
+        border: none;
+        border-radius: 12px;
+        font-size: 16px;
+        color: var(--text);
+        outline: none;
+      }
+      .form-input:focus {
+        background: #e3e3e8;
+      }
+      .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+      .btn-submit {
+        width: 100%;
+        padding: 16px;
+        background: var(--brand);
+        color: #fff;
+        border: none;
+        border-radius: 14px;
+        font-size: 16px;
+        font-weight: 700;
+        margin-top: 10px;
+        cursor: pointer;
+      }
+      .btn-submit:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      .btn-delete {
+        width: 100%;
+        padding: 14px;
+        background: transparent;
+        color: var(--danger);
+        border: none;
+        font-size: 14px;
+        font-weight: 600;
+        margin-top: 8px;
+        cursor: pointer;
+      }
+
+      /* Chips */
+      .chips {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        padding-bottom: 4px;
+        margin-bottom: 8px;
+        -webkit-overflow-scrolling: touch;
+      }
+      .chip {
+        white-space: nowrap;
+        padding: 6px 12px;
+        background: #f0f0f5;
+        border: 1px solid #e0e0e5;
+        border-radius: 20px;
+        font-size: 13px;
+        color: var(--text);
+        font-weight: 500;
+        flex-shrink: 0;
+        cursor: pointer;
+      }
+      .chip:active {
+        background: #e0e0eb;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="head-top">
+        <div class="app-name">☁️ 雲端飲料日記</div>
+        <button class="icon-btn" id="btnSync" onclick="syncData()">
+          🔄 同步
+        </button>
+      </div>
+      <div class="sync-status" id="syncStatus"></div>
+      <div class="offline-banner" id="offlineBanner">
+        📴 目前為離線模式，資料將在連線後同步
+      </div>
+      <div class="segment">
+        <button class="active" onclick="setRange('week')" id="tab-week">
+          本週
+        </button>
+        <button onclick="setRange('month')" id="tab-month">本月</button>
+        <button onclick="setRange('all')" id="tab-all">全部</button>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">累積杯數</div>
+          <div class="stat-val">
+            <span id="valCups">0</span><span class="stat-unit">杯</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">總花費</div>
+          <div class="stat-val" style="color: var(--brand)" id="valSpend">
+            $0
+          </div>
+        </div>
+      </div>
+
+      <h2>
+        店家排行榜
+        <span class="link-btn" onclick="toggleSort()" id="sortHint"
+          >依金額</span
+        >
+      </h2>
+      <div id="listStores" class="list"></div>
+      <div id="emptyStores" class="empty-state" style="display: none">
+        暫無數據
+      </div>
+
+      <h2>近期紀錄</h2>
+      <div id="loadingState" class="loading-state" style="display: none">
+        ☁️ 正在連線到 Google Sheet...
+      </div>
+
+      <div id="listRecords" class="list"></div>
+      <div id="emptyRecords" class="empty-state" style="display: none">
+        點擊右下角 + 開始記錄
+      </div>
+    </main>
+
+    <button class="fab" id="fab">+</button>
+    <div class="overlay" id="overlay"></div>
+
+    <div class="sheet" id="sheet">
+      <div class="sheet-head">
+        <div class="sheet-title" id="sheetTitle">新增紀錄</div>
+        <button class="close-btn" id="btnClose">×</button>
+      </div>
+
+      <form id="form">
+        <div class="form-group">
+          <label class="form-label">店家</label>
+          <div class="chips" id="storeChips"></div>
+          <input
+            class="form-input"
+            id="inpStore"
+            placeholder="輸入店家名稱 (如: 50嵐)"
+            required
+            autocomplete="off"
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">飲料</label>
+          <div class="chips" id="drinkChips" style="display: none"></div>
+          <input
+            class="form-input"
+            id="inpDrink"
+            placeholder="輸入飲料名稱 (如: 1號)"
+            required
+            autocomplete="off"
+          />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">價格</label>
+            <input
+              type="number"
+              inputmode="numeric"
+              class="form-input"
+              id="inpPrice"
+              placeholder="$$"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label class="form-label">日期</label>
+            <input type="date" class="form-input" id="inpDate" required />
+          </div>
+        </div>
+
+        <button type="submit" class="btn-submit" id="btnSubmit">
+          儲存到雲端
+        </button>
+        <button
+          type="button"
+          class="btn-delete"
+          id="btnDelete"
+          style="display: none"
+        >
+          刪除此筆
+        </button>
+      </form>
+    </div>
+
+    <script>
+      // ==========================================
+      // 1. 設定與變數
+      // ==========================================
+      // ⚠️ 這是你的 Google Apps Script 網址
+      const API_URL =
+        "https://script.google.com/macros/s/AKfycbyY2lTL8KuUKjHUV-Ir2nOUmeI1y4gAzhMHwUfp4HvWXIYXLE5qKwG87aL9grmIOLQ4fA/exec";
+      const STORAGE_KEY = "drink_diary_data";
+      const STORAGE_TIMESTAMP = "drink_diary_timestamp";
+      const PENDING_ACTIONS_KEY = "drink_diary_pending";
+
+      let data = [];
+      let viewRange = "week"; // week, month, all
+      let sortMode = "spend"; // spend, cups
+      let editId = null; // 用來判斷是新增還是修改
+      let isOnline = navigator.onLine;
+      let syncInProgress = false;
+
+      const $ = (s) => document.querySelector(s);
+      const $$ = (s) => document.querySelectorAll(s);
+
+      // ==========================================
+      // 2. 初始化 & 雲端同步
+      // ==========================================
+      function init() {
+        // 預設今天日期
+        $("#inpDate").valueAsDate = new Date();
+        
+        // 監聽網路狀態
+        window.addEventListener("online", handleOnline);
+        window.addEventListener("offline", handleOffline);
+        updateOfflineBanner();
+        
+        // 先從本地快取載入資料
+        loadFromCache();
+        
+        // 啟動時先抓資料
+        syncData();
+        
+        // 註冊 Service Worker
+        if ("serviceWorker" in navigator) {
+          navigator.serviceWorker
+            .register("/sw.js")
+            .then(() => console.log("SW registered"))
+            .catch((e) => console.log("SW registration failed", e));
+        }
+      }
+
+      function handleOnline() {
+        isOnline = true;
+        updateOfflineBanner();
+        showSyncStatus("已恢復連線，正在同步...", "syncing");
+        // 處理待處理的操作
+        processPendingActions();
+        syncData();
+      }
+
+      function handleOffline() {
+        isOnline = false;
+        updateOfflineBanner();
+        showSyncStatus("已離線，使用本地資料", "error");
+      }
+
+      function updateOfflineBanner() {
+        const banner = $("#offlineBanner");
+        if (isOnline) {
+          banner.classList.remove("show");
+        } else {
+          banner.classList.add("show");
+        }
+      }
+
+      function showSyncStatus(message, type = "syncing") {
+        const status = $("#syncStatus");
+        status.textContent = message;
+        status.className = `sync-status ${type} show`;
+        setTimeout(() => {
+          status.classList.remove("show");
+        }, 3000);
+      }
+
+      // 本地快取管理
+      function saveToCache() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+          localStorage.setItem(STORAGE_TIMESTAMP, Date.now().toString());
+        } catch (e) {
+          console.error("儲存快取失敗", e);
+        }
+      }
+
+      function loadFromCache() {
+        try {
+          const cached = localStorage.getItem(STORAGE_KEY);
+          const timestamp = localStorage.getItem(STORAGE_TIMESTAMP);
+          
+          if (cached) {
+            const cachedData = JSON.parse(cached);
+            // 如果快取資料存在且不超過 1 小時，使用快取
+            const age = Date.now() - (parseInt(timestamp) || 0);
+            if (age < 3600000) { // 1 小時
+              data = cachedData;
+              render();
+              console.log("已從快取載入資料");
+            }
+          }
+        } catch (e) {
+          console.error("載入快取失敗", e);
+        }
+      }
+
+      // 待處理操作管理（離線時使用）
+      function addPendingAction(action, payload) {
+        try {
+          const pending = JSON.parse(localStorage.getItem(PENDING_ACTIONS_KEY) || "[]");
+          pending.push({ action, payload, timestamp: Date.now() });
+          localStorage.setItem(PENDING_ACTIONS_KEY, JSON.stringify(pending));
+        } catch (e) {
+          console.error("儲存待處理操作失敗", e);
+        }
+      }
+
+      async function processPendingActions() {
+        try {
+          const pending = JSON.parse(localStorage.getItem(PENDING_ACTIONS_KEY) || "[]");
+          if (pending.length === 0) return;
+
+          showSyncStatus(`正在處理 ${pending.length} 個待處理操作...`, "syncing");
+
+          for (const item of pending) {
+            try {
+              await fetch(API_URL, {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "text/plain" },
+                body: JSON.stringify({ ...item.payload, action: item.action }),
+              });
+            } catch (e) {
+              console.error("處理待處理操作失敗", e);
+            }
+          }
+
+          localStorage.removeItem(PENDING_ACTIONS_KEY);
+          showSyncStatus("所有待處理操作已完成", "success");
+          syncData();
+        } catch (e) {
+          console.error("處理待處理操作時發生錯誤", e);
+        }
+      }
+
+      async function syncData(retryCount = 0) {
+        if (syncInProgress) {
+          console.log("同步已進行中，跳過");
+          return;
+        }
+
+        if (!isOnline) {
+          showSyncStatus("離線中，無法同步", "error");
+          return;
+        }
+
+        syncInProgress = true;
+        const maxRetries = 3;
+        const retryDelay = 1000 * (retryCount + 1); // 遞增延遲
+
+        // UI 狀態切換
+        if (retryCount === 0) {
+          $("#loadingState").style.display = "block";
+          $("#listRecords").style.display = "none";
+          $("#listStores").style.display = "none";
+          $("#emptyRecords").style.display = "none";
+        }
+        $("#btnSync").innerText = "⏳";
+        showSyncStatus("正在同步資料...", "syncing");
+
+        try {
+          // 使用 timeout 避免長時間等待
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 秒超時
+
+          const res = await fetch(API_URL, {
+            signal: controller,
+            cache: "no-cache",
+          });
+          clearTimeout(timeoutId);
+
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+          }
+
+          const rows = await res.json();
+
+          if (!Array.isArray(rows)) {
+            throw new Error("資料格式錯誤");
+          }
+
+          // 資料轉換：[date, store, item, price, id] -> Object
+          const newData = rows.map((r) => ({
+            date: formatDate(r[0]),
+            store: r[1] || "",
+            drink: r[2] || "",
+            price: Number(r[3]) || 0,
+            id: r[4] || `ID${Date.now()}_${Math.random()}`, // Google Sheet 裡的 ID
+          }));
+
+          // 合併資料（處理衝突）
+          data = mergeData(data, newData);
+          saveToCache(); // 儲存到本地快取
+
+          render(); // 抓完資料後重新渲染畫面
+          showSyncStatus("同步成功", "success");
+        } catch (e) {
+          console.error("同步失敗", e);
+          
+          // 重試機制
+          if (retryCount < maxRetries && isOnline) {
+            showSyncStatus(`同步失敗，${retryDelay / 1000} 秒後重試...`, "error");
+            setTimeout(() => {
+              syncData(retryCount + 1);
+            }, retryDelay);
+            return;
+          }
+
+          // 如果所有重試都失敗，使用快取資料
+          if (data.length === 0) {
+            loadFromCache();
+          }
+          
+          if (retryCount === 0) {
+            showSyncStatus("同步失敗，使用本地資料", "error");
+          }
+        } finally {
+          $("#loadingState").style.display = "none";
+          $("#listRecords").style.display = "flex";
+          $("#listStores").style.display = "flex";
+          $("#btnSync").innerText = "🔄 同步";
+          syncInProgress = false;
+        }
+      }
+
+      // 合併資料（處理多裝置同步衝突）
+      function mergeData(localData, remoteData) {
+        const merged = [...remoteData];
+        const remoteIds = new Set(remoteData.map((d) => d.id));
+
+        // 保留本地有但遠端沒有的資料（可能是待同步的）
+        localData.forEach((local) => {
+          if (!remoteIds.has(local.id)) {
+            // 檢查是否為待處理的操作
+            const pending = JSON.parse(localStorage.getItem(PENDING_ACTIONS_KEY) || "[]");
+            const isPending = pending.some(
+              (p) => p.payload.id === local.id || p.payload.id === local.id.replace("ID", "")
+            );
+            if (!isPending) {
+              merged.push(local);
+            }
+          }
+        });
+
+        // 按日期排序
+        merged.sort((a, b) => new Date(b.date) - new Date(a.date));
+        return merged;
+      }
+
+      // ==========================================
+      // 3. 資料操作 (CRUD)
+      // ==========================================
+      async function handleSubmit(e) {
+        e.preventDefault();
+
+        // 資料驗證
+        const store = $("#inpStore").value.trim();
+        const drink = $("#inpDrink").value.trim();
+        const price = parseFloat($("#inpPrice").value);
+        const date = $("#inpDate").value;
+
+        if (!store || !drink) {
+          alert("請填寫店家名稱和飲料名稱");
+          return;
+        }
+
+        if (isNaN(price) || price <= 0) {
+          alert("請輸入有效的價格");
+          return;
+        }
+
+        if (!date) {
+          alert("請選擇日期");
+          return;
+        }
+
+        const btn = $("#btnSubmit");
+        const originalText = btn.innerText;
+        btn.disabled = true;
+        btn.innerText = isOnline ? "☁️ 雲端處理中..." : "💾 儲存中...";
+
+        // 判斷動作
+        const action = editId ? "edit" : "add";
+        // 如果是新增，產生一個隨機 ID
+        const id = editId ? editId : "ID" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
+
+        const payload = {
+          action: action,
+          id: id,
+          store: store,
+          item: drink, // 對應 GAS 變數
+          price: price,
+          date: date,
+        };
+
+        // 樂觀更新：先更新本地資料
+        const newItem = {
+          id: id,
+          store: store,
+          drink: drink,
+          price: price,
+          date: date,
+        };
+
+        if (editId) {
+          // 編輯模式
+          const index = data.findIndex((d) => d.id === editId);
+          if (index !== -1) {
+            data[index] = newItem;
+          }
+        } else {
+          // 新增模式
+          data.unshift(newItem);
+        }
+        saveToCache();
+        render();
+
+        if (isOnline) {
+          try {
+            // 傳送給 Google Apps Script
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+            await fetch(API_URL, {
+              method: "POST",
+              mode: "no-cors",
+              headers: { "Content-Type": "text/plain" },
+              body: JSON.stringify(payload),
+              signal: controller,
+            });
+            clearTimeout(timeoutId);
+
+            showSyncStatus(editId ? "修改成功！" : "新增成功！", "success");
+            closeSheet();
+            // 背景同步確保資料正確
+            setTimeout(() => syncData(), 500);
+          } catch (e) {
+            console.error("上傳失敗", e);
+            // 如果上傳失敗，將操作加入待處理列表
+            addPendingAction(action, payload);
+            showSyncStatus("已儲存，將在連線後自動同步", "syncing");
+            closeSheet();
+          }
+        } else {
+          // 離線模式：加入待處理列表
+          addPendingAction(action, payload);
+          showSyncStatus("已儲存，將在連線後自動同步", "syncing");
+          closeSheet();
+        }
+
+        btn.disabled = false;
+        btn.innerText = originalText;
+      }
+
+      async function deleteRecord() {
+        if (!confirm("確定要刪除這筆紀錄嗎？(無法復原)")) return;
+
+        const btn = $("#btnDelete");
+        const originalText = btn.innerText;
+        btn.disabled = true;
+        btn.innerText = isOnline ? "刪除中..." : "標記刪除...";
+
+        // 樂觀更新：先從本地移除
+        data = data.filter((d) => d.id !== editId);
+        saveToCache();
+        render();
+
+        const payload = { action: "delete", id: editId };
+
+        if (isOnline) {
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+            await fetch(API_URL, {
+              method: "POST",
+              mode: "no-cors",
+              headers: { "Content-Type": "text/plain" },
+              body: JSON.stringify(payload),
+              signal: controller,
+            });
+            clearTimeout(timeoutId);
+
+            showSyncStatus("已刪除", "success");
+            closeSheet();
+            setTimeout(() => syncData(), 500);
+          } catch (e) {
+            console.error("刪除失敗", e);
+            addPendingAction("delete", payload);
+            showSyncStatus("已標記刪除，將在連線後同步", "syncing");
+            closeSheet();
+          }
+        } else {
+          addPendingAction("delete", payload);
+          showSyncStatus("已標記刪除，將在連線後同步", "syncing");
+          closeSheet();
+        }
+
+        btn.disabled = false;
+        btn.innerText = originalText;
+      }
+
+      // ==========================================
+      // 4. 畫面渲染邏輯 (這部分沿用你原本的精美 UI)
+      // ==========================================
+      function render() {
+        const subData = getFilteredData();
+
+        // 1. 統計數字
+        const totalCups = subData.length;
+        const totalSpend = subData.reduce((a, b) => a + Number(b.price), 0);
+        $("#valCups").innerText = totalCups;
+        $("#valSpend").innerText = fmtMoney(totalSpend);
+
+        // 2. 紀錄列表
+        const list = $("#listRecords");
+        list.innerHTML = "";
+
+        if (subData.length === 0) {
+          $("#emptyRecords").style.display = "block";
+        } else {
+          $("#emptyRecords").style.display = "none";
+          // 排序：日期新的在上面
+          const sorted = [...subData].sort(
+            (a, b) => new Date(b.date) - new Date(a.date)
+          );
+
+          sorted.forEach((item) => {
+            const div = document.createElement("div");
+            div.className = "item";
+            div.onclick = () => openSheet(item); // 點擊編輯
+            div.innerHTML = `
+              <div class="item-main">
+                <div class="item-title">${item.store}</div>
+                <div class="item-sub">${item.drink}</div>
+              </div>
+              <div class="item-right">
+                <div class="item-price">${fmtMoney(item.price)}</div>
+                <div class="item-tag">${item.date
+                  .slice(5)
+                  .replace("-", "/")}</div>
+              </div>
+            `;
+            list.appendChild(div);
+          });
+        }
+
+        // 3. 店家排行榜
+        const storeMap = {};
+        subData.forEach((i) => {
+          if (!storeMap[i.store])
+            storeMap[i.store] = { name: i.store, cups: 0, spend: 0 };
+          storeMap[i.store].cups += 1;
+          storeMap[i.store].spend += Number(i.price);
+        });
+        let stores = Object.values(storeMap);
+
+        // 排序邏輯
+        stores.sort((a, b) =>
+          sortMode === "spend" ? b.spend - a.spend : b.cups - a.cups
+        );
+
+        const storeList = $("#listStores");
+        storeList.innerHTML = "";
+        if (stores.length === 0) {
+          $("#emptyStores").style.display = "block";
+        } else {
+          $("#emptyStores").style.display = "none";
+          stores.forEach((s) => {
+            const div = document.createElement("div");
+            div.className = "item";
+            div.style.cursor = "default"; // 排行榜不能點
+            div.innerHTML = `
+              <div class="item-main">
+                <div class="item-title">${s.name}</div>
+                <div class="item-sub">${s.cups} 杯</div>
+              </div>
+              <div class="item-right">
+                <div class="item-price">${fmtMoney(s.spend)}</div>
+              </div>
+            `;
+            storeList.appendChild(div);
+          });
+        }
+      }
+
+      // ==========================================
+      // 5. 輔助功能
+      // ==========================================
+      const fmtMoney = (n) => `$${n}`;
+
+      const getStartOfWeek = () => {
+        const d = new Date();
+        const day = d.getDay() || 7;
+        d.setHours(0, 0, 0, 0);
+        d.setDate(d.getDate() - day + 1);
+        return d;
+      };
+
+      const getStartOfMonth = () => {
+        const d = new Date();
+        d.setHours(0, 0, 0, 0);
+        d.setDate(1);
+        return d;
+      };
+
+      function getFilteredData() {
+        const now = new Date();
+        let limit = 0;
+        if (viewRange === "week") limit = getStartOfWeek().getTime();
+        if (viewRange === "month") limit = getStartOfMonth().getTime();
+        return data.filter((d) => new Date(d.date).getTime() >= limit);
+      }
+
+      function formatDate(dateVal) {
+        if (!dateVal) return "";
+        const d = new Date(dateVal);
+        const offset = d.getTimezoneOffset() * 60000;
+        return new Date(d - offset).toISOString().slice(0, 10);
+      }
+
+      function setRange(r) {
+        viewRange = r;
+        $$(".segment button").forEach((b) => b.classList.remove("active"));
+        $(`#tab-${r}`).classList.add("active");
+        render();
+      }
+
+      function toggleSort() {
+        sortMode = sortMode === "spend" ? "cups" : "spend";
+        $("#sortHint").innerText = sortMode === "spend" ? "依金額" : "依杯數";
+        render();
+      }
+
+      // ==========================================
+      // 6. UI 互動 (Sheet & Suggestion)
+      // ==========================================
+      function openSheet(item = null) {
+        $("#overlay").classList.add("show");
+        $("#sheet").classList.add("show");
+
+        renderStoreSuggestions();
+        $("#drinkChips").style.display = "none";
+
+        if (item) {
+          // 編輯模式
+          editId = item.id;
+          $("#sheetTitle").innerText = "編輯紀錄";
+          $("#inpStore").value = item.store;
+          $("#inpDrink").value = item.drink;
+          $("#inpPrice").value = item.price;
+          $("#inpDate").value = item.date;
+          $("#btnSubmit").innerText = "更新紀錄";
+          $("#btnDelete").style.display = "block";
+        } else {
+          // 新增模式
+          editId = null;
+          $("#sheetTitle").innerText = "新增紀錄";
+          $("#inpStore").value = "";
+          $("#inpDrink").value = "";
+          $("#inpPrice").value = "";
+          $("#inpDate").valueAsDate = new Date();
+          $("#btnSubmit").innerText = "儲存到雲端";
+          $("#btnDelete").style.display = "none";
+          $("#inpStore").focus();
+        }
+      }
+
+      function closeSheet() {
+        $("#overlay").classList.remove("show");
+        $("#sheet").classList.remove("show");
+        $("#inpStore").blur();
+      }
+
+      function renderStoreSuggestions() {
+        const count = {};
+        data.forEach((x) => (count[x.store] = (count[x.store] || 0) + 1));
+        const topStores = Object.keys(count)
+          .sort((a, b) => count[b] - count[a])
+          .slice(0, 5);
+
+        const box = $("#storeChips");
+        box.innerHTML = "";
+        topStores.forEach((s) => {
+          const chip = document.createElement("div");
+          chip.className = "chip";
+          chip.innerText = s;
+          chip.onclick = () => {
+            $("#inpStore").value = s;
+            renderDrinkSuggestions(s);
+          };
+          box.appendChild(chip);
+        });
+      }
+
+      function renderDrinkSuggestions(storeName) {
+        const drinks = data
+          .filter((x) => x.store === storeName)
+          .map((x) => x.drink);
+        const count = {};
+        drinks.forEach((d) => (count[d] = (count[d] || 0) + 1));
+        const topDrinks = Object.keys(count)
+          .sort((a, b) => count[b] - count[a])
+          .slice(0, 5);
+
+        const box = $("#drinkChips");
+        if (topDrinks.length > 0) {
+          box.style.display = "flex";
+          box.innerHTML = "";
+          topDrinks.forEach((d) => {
+            const chip = document.createElement("div");
+            chip.className = "chip";
+            chip.innerText = d;
+            chip.onclick = () => {
+              $("#inpDrink").value = d;
+              // 自動帶入上次價格
+              const last = data.find(
+                (x) => x.store === storeName && x.drink === d
+              );
+              if (last) $("#inpPrice").value = last.price;
+            };
+            box.appendChild(chip);
+          });
+        } else {
+          box.style.display = "none";
+        }
+      }
+
+      $("#inpStore").addEventListener("blur", (e) => {
+        if (e.target.value) renderDrinkSuggestions(e.target.value);
+      });
+
+      // ==========================================
+      // 7. 事件監聽
+      // ==========================================
+      $("#fab").onclick = () => openSheet();
+      $("#overlay").onclick = closeSheet;
+      $("#btnClose").onclick = closeSheet;
+      $("#form").onsubmit = handleSubmit;
+      $("#btnDelete").onclick = deleteRecord;
+
+      // 啟動！
+      init();
+    </script>
+  </body>
+</html>
