@@ -1,8 +1,8 @@
 // Service Worker for 手搖飲日記
 const CACHE_NAME = "drink-diary-v1";
 const urlsToCache = [
-  "/",
-  "/index.html",
+  "./",
+  "./index.html",
 ];
 
 // 安裝 Service Worker
@@ -49,7 +49,7 @@ self.addEventListener("fetch", (event) => {
         .catch(() => {
           // 網路失敗時，如果是導航請求，返回快取的 index.html
           if (event.request.mode === "navigate") {
-            return caches.match("/index.html");
+            return caches.match("./index.html");
           }
         });
     })
