@@ -735,12 +735,15 @@
 
           for (const item of pending) {
             try {
-              await fetch(API_URL, {
+              const res = await fetch(API_URL, {
                 method: "POST",
-                mode: "no-cors",
-                headers: { "Content-Type": "text/plain" },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ ...item.payload, action: item.action }),
               });
+              const result = await res.json();
+              if (!result.success) {
+                throw new Error(result.error);
+              }
             } catch (e) {
               console.error("處理待處理操作失敗", e);
             }
@@ -830,9 +833,8 @@
           }
 
           // 資料轉換：[date, store, item, price, id] -> Object
-          const newData = rows.map((r, index) => {
+          const newData = rows.map((r) => {
             if (!Array.isArray(r)) {
-              console.warn(`第 ${index} 筆資料格式錯誤:`, r);
               return null;
             }
             return {
@@ -840,9 +842,9 @@
               store: r[1] || "",
               drink: r[2] || "",
               price: Number(r[3]) || 0,
-              id: r[4] || `ID${Date.now()}_${Math.random()}`, // Google Sheet 裡的 ID
+              id: r[4] || `ID${Date.now()}_${Math.random()}`,
             };
-          }).filter(r => r !== null);
+          }).filter(r => r !== null && r.id);
 
           console.log("轉換後資料:", newData.length, "筆");
 
@@ -1033,18 +1035,12 @@
               }
             }, 10000);
 
-            // 使用 Google Apps Script 的標準方式
-            const formData = new FormData();
-            formData.append("action", payload.action);
-            formData.append("id", payload.id);
-            formData.append("store", payload.store);
-            formData.append("item", payload.item);
-            formData.append("price", payload.price);
-            formData.append("date", payload.date);
-
             const fetchOptions = {
               method: "POST",
-              body: formData,
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(payload),
             };
             
             if (controller && controller.signal) {
@@ -1054,8 +1050,16 @@
             const res = await fetch(API_URL, fetchOptions);
             clearTimeout(timeoutId);
 
-            // 檢查回應（雖然 no-cors 模式下無法讀取，但至少知道請求已送出）
-            console.log("上傳回應狀態:", res.status);
+            if (!res.ok) {
+              throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+            }
+
+            const result = await res.json();
+            console.log("上傳回應:", result);
+
+            if (!result.success) {
+              throw new Error(result.error || "操作失敗");
+            }
 
             showSyncStatus(editId ? "修改成功！" : "新增成功！", "success");
             closeSheet();
@@ -1106,13 +1110,12 @@
               }
             }, 10000);
 
-            const formData = new FormData();
-            formData.append("action", "delete");
-            formData.append("id", editId);
-
             const fetchOptions = {
               method: "POST",
-              body: formData,
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(payload),
             };
             
             if (controller && controller.signal) {
@@ -1122,7 +1125,16 @@
             const res = await fetch(API_URL, fetchOptions);
             clearTimeout(timeoutId);
 
-            console.log("刪除回應狀態:", res.status);
+            if (!res.ok) {
+              throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+            }
+
+            const result = await res.json();
+            console.log("刪除回應:", result);
+
+            if (!result.success) {
+              throw new Error(result.error || "刪除失敗");
+            }
 
             showSyncStatus("已刪除", "success");
             closeSheet();
