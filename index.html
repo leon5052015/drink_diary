@@ -638,12 +638,17 @@
         // 啟動時先抓資料
         syncData();
         
-        // 註冊 Service Worker
-        if ("serviceWorker" in navigator) {
+        // 註冊 Service Worker（只在 HTTPS 或 localhost 環境下）
+        if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
           navigator.serviceWorker
             .register("/sw.js")
             .then(() => console.log("SW registered"))
-            .catch((e) => console.log("SW registration failed", e));
+            .catch((e) => {
+              // 只在非本地檔案環境下顯示錯誤
+              if (location.protocol !== "file:") {
+                console.log("SW registration failed", e);
+              }
+            });
         }
       }
 
@@ -779,16 +784,26 @@
           
           // 使用 timeout 避免長時間等待
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 秒超時
+          const timeoutId = setTimeout(() => {
+            if (controller && controller.signal) {
+              controller.abort();
+            }
+          }, 15000); // 15 秒超時
 
-          const res = await fetch(API_URL + "?t=" + Date.now(), {
+          const fetchOptions = {
             method: "GET",
-            signal: controller,
             cache: "no-cache",
             headers: {
               "Cache-Control": "no-cache",
             },
-          });
+          };
+          
+          // 只有在 controller 和 signal 存在時才添加
+          if (controller && controller.signal) {
+            fetchOptions.signal = controller.signal;
+          }
+
+          const res = await fetch(API_URL + "?t=" + Date.now(), fetchOptions);
           clearTimeout(timeoutId);
 
           console.log("API 回應狀態:", res.status, res.statusText);
@@ -1012,7 +1027,11 @@
             // 傳送給 Google Apps Script
             console.log("發送資料:", payload);
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            const timeoutId = setTimeout(() => {
+              if (controller && controller.signal) {
+                controller.abort();
+              }
+            }, 10000);
 
             // 使用 Google Apps Script 的標準方式
             const formData = new FormData();
@@ -1023,11 +1042,16 @@
             formData.append("price", payload.price);
             formData.append("date", payload.date);
 
-            const res = await fetch(API_URL, {
+            const fetchOptions = {
               method: "POST",
               body: formData,
-              signal: controller,
-            });
+            };
+            
+            if (controller && controller.signal) {
+              fetchOptions.signal = controller.signal;
+            }
+
+            const res = await fetch(API_URL, fetchOptions);
             clearTimeout(timeoutId);
 
             // 檢查回應（雖然 no-cors 模式下無法讀取，但至少知道請求已送出）
@@ -1076,17 +1100,26 @@
           try {
             console.log("刪除資料:", payload);
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            const timeoutId = setTimeout(() => {
+              if (controller && controller.signal) {
+                controller.abort();
+              }
+            }, 10000);
 
             const formData = new FormData();
             formData.append("action", "delete");
             formData.append("id", editId);
 
-            const res = await fetch(API_URL, {
+            const fetchOptions = {
               method: "POST",
               body: formData,
-              signal: controller,
-            });
+            };
+            
+            if (controller && controller.signal) {
+              fetchOptions.signal = controller.signal;
+            }
+
+            const res = await fetch(API_URL, fetchOptions);
             clearTimeout(timeoutId);
 
             console.log("刪除回應狀態:", res.status);
