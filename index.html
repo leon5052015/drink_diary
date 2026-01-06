@@ -795,10 +795,6 @@
 
           const fetchOptions = {
             method: "GET",
-            cache: "no-cache",
-            headers: {
-              "Cache-Control": "no-cache",
-            },
           };
           
           // 只有在 controller 和 signal 存在時才添加
@@ -815,13 +811,6 @@
             const errorText = await res.text().catch(() => "");
             console.error("API 錯誤回應:", errorText);
             throw new Error(`HTTP ${res.status}: ${res.statusText}. ${errorText.substring(0, 100)}`);
-          }
-
-          const contentType = res.headers.get("content-type");
-          if (!contentType || !contentType.includes("application/json")) {
-            const text = await res.text();
-            console.error("非 JSON 回應:", text.substring(0, 200));
-            throw new Error("伺服器回應格式錯誤，預期 JSON 但收到: " + contentType);
           }
 
           const rows = await res.json();
