@@ -1,6 +1,6 @@
 {
-  "name": "手搖飲日記",
-  "short_name": "飲料日記",
+  "name": "手搖日記",
+  "short_name": "手搖日記",
   "description": "記錄你的手搖飲消費，支援跨裝置雲端同步",
   "start_url": "/",
   "display": "standalone",
