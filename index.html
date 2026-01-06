@@ -605,7 +605,7 @@
       // ==========================================
       // ⚠️ 這是你的 Google Apps Script 網址
       const API_URL =
-        "https://script.google.com/macros/s/AKfycbx0LhoQuVzmTUgRvowFRNpIjVk5Tw5z52vAZSDMtxrA3VCqwMOeJeRBLUi4wMl6n8Mxbg/exec";
+        "https://script.google.com/macros/s/AKfycbxoAFfVBJsnbBHOTGkv7X8Z0SlQwfa1V6iG5nU4GDsOfoJDJgVRa-eJWczGweVHVJrc0w/exec";
       const STORAGE_KEY = "drink_diary_data";
       const STORAGE_TIMESTAMP = "drink_diary_timestamp";
       const PENDING_ACTIONS_KEY = "drink_diary_pending";
@@ -843,15 +843,37 @@
           
           // 顯示詳細錯誤
           let userMsg = "同步失敗";
-          if (errorMsg.includes("Failed to fetch") || errorMsg.includes("NetworkError")) {
-            userMsg = "網路連線失敗，請檢查網路或 API 網址";
+          let debugInfo = "";
+          
+          if (errorMsg.includes("Failed to fetch") || errorMsg.includes("NetworkError") || errorMsg.includes("fetch")) {
+            userMsg = "無法連線到伺服器";
+            debugInfo = `可能原因：
+1. Google Apps Script 未正確部署
+2. API 網址不正確
+3. 網路連線問題
+4. CORS 設定錯誤
+
+請檢查：
+- Apps Script 是否已部署為「網頁應用程式」
+- 是否設定「任何人」可存取
+- API 網址是否正確：${API_URL}`;
           } else if (errorMsg.includes("aborted")) {
             userMsg = "請求超時，請稍後再試";
           } else if (errorMsg.includes("CORS")) {
             userMsg = "CORS 錯誤，請檢查 Apps Script 部署設定";
+            debugInfo = "請確認 Apps Script 部署時選擇「任何人」可存取";
           } else {
             userMsg = `同步失敗：${errorMsg.substring(0, 50)}`;
           }
+          
+          // 在 Console 顯示詳細資訊
+          console.error("詳細錯誤資訊:", {
+            error: e,
+            message: errorMsg,
+            API_URL: API_URL,
+            isOnline: isOnline,
+            debugInfo: debugInfo
+          });
           
           // 重試機制
           if (retryCount < maxRetries && isOnline) {
@@ -877,7 +899,12 @@
               stack: e.stack,
               API_URL: API_URL,
               isOnline: isOnline,
+              errorType: e.name,
+              errorDetails: e
             });
+            
+            // 嘗試直接測試 API URL
+            testAPIURL();
           }
         } finally {
           $("#loadingState").style.display = "none";
@@ -1382,35 +1409,85 @@
         content.appendChild(testDiv);
 
         try {
+          console.log("測試 API URL:", API_URL);
           const startTime = Date.now();
+          
+          // 先測試基本連線
           const res = await fetch(API_URL + "?t=" + Date.now(), {
             method: "GET",
             cache: "no-cache",
+            mode: "cors",
           });
           const endTime = Date.now();
           const duration = endTime - startTime;
 
+          console.log("API 回應:", res.status, res.statusText);
+
           if (res.ok) {
-            const data = await res.json();
-            testDiv.innerHTML = `
-              <span class="debug-label">✅ API 測試成功</span>
-              <div class="debug-value">狀態: ${res.status}</div>
-              <div class="debug-value">回應時間: ${duration}ms</div>
-              <div class="debug-value">資料筆數: ${Array.isArray(data) ? data.length : "格式錯誤"}</div>
-            `;
+            const contentType = res.headers.get("content-type");
+            console.log("Content-Type:", contentType);
+            
+            if (contentType && contentType.includes("application/json")) {
+              const data = await res.json();
+              testDiv.innerHTML = `
+                <span class="debug-label">✅ API 測試成功</span>
+                <div class="debug-value">狀態: ${res.status}</div>
+                <div class="debug-value">回應時間: ${duration}ms</div>
+                <div class="debug-value">資料筆數: ${Array.isArray(data) ? data.length : "格式錯誤"}</div>
+                <div class="debug-value">Content-Type: ${contentType}</div>
+              `;
+            } else {
+              const text = await res.text();
+              testDiv.innerHTML = `
+                <span class="debug-label debug-error">⚠️ 回應格式錯誤</span>
+                <div class="debug-value">狀態: ${res.status}</div>
+                <div class="debug-value">Content-Type: ${contentType || "未知"}</div>
+                <div class="debug-value">回應內容: ${text.substring(0, 100)}</div>
+              `;
+            }
           } else {
+            const errorText = await res.text().catch(() => "");
             testDiv.innerHTML = `
               <span class="debug-label debug-error">❌ API 測試失敗</span>
               <div class="debug-value">狀態: ${res.status} ${res.statusText}</div>
+              <div class="debug-value">錯誤內容: ${errorText.substring(0, 200)}</div>
             `;
           }
         } catch (e) {
+          console.error("API 測試錯誤:", e);
+          let errorDetails = e.message;
+          if (e.message.includes("Failed to fetch") || e.message.includes("fetch")) {
+            errorDetails = `無法連線到伺服器
+可能原因：
+1. Google Apps Script 未正確部署
+2. API 網址不正確: ${API_URL}
+3. CORS 設定錯誤（需設定「任何人」可存取）
+4. 網路連線問題`;
+          }
           testDiv.innerHTML = `
             <span class="debug-label debug-error">❌ API 測試失敗</span>
-            <div class="debug-value">錯誤: ${e.message}</div>
+            <div class="debug-value" style="white-space: pre-wrap; font-size: 10px;">${errorDetails}</div>
           `;
         }
         updateDebugInfo();
+      }
+
+      // 自動測試 API URL（當同步失敗時）
+      async function testAPIURL() {
+        try {
+          console.log("自動測試 API URL...");
+          const res = await fetch(API_URL, {
+            method: "GET",
+            mode: "cors",
+          });
+          console.log("API 測試結果:", res.status, res.statusText);
+        } catch (e) {
+          console.error("API URL 測試失敗:", e);
+          console.error("請確認：");
+          console.error("1. Google Apps Script 已部署為「網頁應用程式」");
+          console.error("2. 部署時選擇「任何人」可存取");
+          console.error("3. API URL 正確:", API_URL);
+        }
       }
 
       function clearCache() {
